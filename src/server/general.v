@@ -65,7 +65,9 @@ pub fn (mut ls LanguageServer) initialize(params lsp.InitializeParams, mut wr Re
 				trigger_characters:   ['(', ',']
 				retrigger_characters: [',', ' ']
 			}
-			code_lens_provider:           lsp.CodeLensOptions{}
+			// code_lens_provider intentionally omitted — lens commands
+			// (v-analyzer.showReferences, runWorkspace, etc.) are not
+			// implemented by any supported editor extension.
 			inlay_hint_provider:          lsp.InlayHintOptions{}
 			semantic_tokens_provider:     lsp.SemanticTokensOptions{
 				legend: lsp.SemanticTokensLegend{

@@ -17,9 +17,7 @@
 - [Configuration](#configuration)
 - [Editor Support](#editor-support)
   - [Zed](#zed)
-  - [VS Code](#vs-code)
   - [Neovim](#neovim)
-- [Project Structure](#project-structure)
 - [Relationship to Upstream](#relationship-to-upstream)
 - [Authors](#authors)
 - [License](#license)
@@ -101,6 +99,8 @@ All features from the upstream v-analyzer are preserved. The full capability set
 - **Document highlights** — read vs write access highlighted differently; updates on cursor move
 - **Code actions** — Make Mutable, Make Public, Add `[heap]`, Add `[flag]`, Import Module, Remove Unused Import
 - **Diagnostics** — real V compiler errors, warnings, and notices; unused symbols tagged with `DiagnosticTag.unnecessary`, deprecated symbols with `DiagnosticTag.deprecated`
+
+> **Note:** Code lens is implemented in the server but disabled — the lens commands it emits (`v-analyzer.showReferences`, `v-analyzer.runWorkspace`, etc.) are not handled by any supported editor extension, so lenses would appear but be non-functional.
 
 ---
 
@@ -209,12 +209,6 @@ enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
 
-[code_lens]
-enable = true
-enable_run_lens = true
-enable_inheritors_lens = true
-enable_super_interfaces_lens = true
-enable_run_tests_lens = true
 ```
 
 ---
@@ -236,16 +230,6 @@ Configure Zed's `settings.json` to point at the velvet binary:
             }
         }
     }
-}
-```
-
-### VS Code
-
-Point `velvet.serverPath` at the binary:
-
-```json
-{
-    "velvet.serverPath": "/path/to/velvet"
 }
 ```
 
@@ -285,39 +269,9 @@ Any editor that supports the Language Server Protocol can use velvet by pointing
 
 ---
 
-## Project Structure
-
-```txt
-velvet/
-├── src/
-│   ├── analyzer/
-│   │   └── psi/                  # PSI (Program Structure Interface) layer
-│   │       ├── EnumDeclaration.v
-│   │       ├── EnumFieldDeclaration.v  # ← bug fixes: smartcasts, value resolution
-│   │       ├── FieldDeclaration.v
-│   │       ├── StructDeclaration.v
-│   │       ├── search/
-│   │       │   └── ReferencesSearch.v  # ← bug fix: live-file rename search
-│   │       └── ...
-│   └── server/
-│       ├── documentation/
-│       │   └── provider.v        # ← enhancements: struct/enum hover rendering
-│       ├── features_rename.v
-│       ├── features_selection_range.v  # ← addition: structural selection range
-│       └── ...
-│   lsp/
-│       ├── selection_range.v     # ← addition: SelectionRangeParams / SelectionRange types
-│       └── ...
-├── tree_sitter_v/                # Git submodule — https://github.com/DaZhi-the-Revelator/tree-sitter-v
-├── build.vsh                     # Build script
-└── install.vsh                   # Install script
-```
-
----
-
 ## Relationship to Upstream
 
-velvet diverges from [vlang/v-analyzer](https://github.com/vlang/v-analyzer) with bug fixes and feature additions that have not been merged upstream. No changes have been made to the `jsonrpc`, `lsp`, or `tree_sitter_v` modules. The Jupyter kernel lives in the V Enhanced Zed extension repository and is not part of this project.
+velvet diverges from [vlang/v-analyzer](https://github.com/vlang/v-analyzer) with bug fixes and feature additions that have not been merged upstream. No changes have been made to the `jsonrpc` or `lsp` modules. The Jupyter kernel lives in the V Enhanced Zed extension repository and is not part of this project.
 
 ---
 
