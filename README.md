@@ -233,6 +233,40 @@ Configure Zed's `settings.json` to point at the velvet binary:
 
 ### Neovim
 
+velvet works with both **Neovim 0.11+** (native `vim.lsp` API) and older setups using **nvim-lspconfig**.
+
+#### Neovim 0.11+ (native `vim.lsp.config`)
+
+Neovim 0.11 introduced a built-in LSP configuration API that does not require nvim-lspconfig. Add the following to your `init.lua`:
+
+```lua
+vim.lsp.config('velvet', {
+  cmd = { vim.fn.expand('~/.local/bin/velvet'), '--stdio' },
+  filetypes = { 'v', 'vsh', 'vv' },
+  root_markers = { 'v.mod', '.git' },
+})
+vim.lsp.enable('velvet')
+```
+
+> **Important:** Always pass `--stdio` explicitly in `cmd`. Neovim's native LSP client starts the server process and pipes stdio without passing any command-line flags of its own — velvet defaults to stdio internally, but some environments require the flag to be explicit for the handshake to complete.
+
+> **`root_markers` is a flat list**, not a nested table. Wrapping entries in an inner table (e.g. `{ { 'v.mod' }, '.git' }`) causes Neovim to treat each marker group as a conjunction — if your project has no `v.mod`, the group fails and the server never attaches. Use a flat list so velvet attaches in any V project, with or without a module file.
+
+Verify with `:checkhealth vim.lsp` — you should see velvet listed under **Active Clients**.
+
+On Windows, expand the path to `velvet.exe`:
+
+```lua
+vim.lsp.config('velvet', {
+  cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe'), '--stdio' },
+  filetypes = { 'v', 'vsh', 'vv' },
+  root_markers = { 'v.mod', '.git' },
+})
+vim.lsp.enable('velvet')
+```
+
+#### Older Neovim (nvim-lspconfig)
+
 `nvim-lspconfig`'s built-in `v_analyzer` config hardcodes the binary name `v-analyzer`, so pointing it at `velvet` will silently fail — the server never attaches, and none of the default LSP keymaps (`gra`, `grr`, `grn`, `gri`, `grt`, `gO`) activate.
 
 Instead, register velvet as a **new** server config before calling `setup`:
@@ -244,7 +278,7 @@ local configs = require('lspconfig.configs')
 if not configs.velvet then
   configs.velvet = {
     default_config = {
-      cmd = { vim.fn.expand('~/.local/bin/velvet') }, -- adjust path as needed
+      cmd = { vim.fn.expand('~/.local/bin/velvet'), '--stdio' },
       filetypes = { 'v', 'vsh', 'vv' },
       root_dir = lspconfig.util.root_pattern('v.mod', '.git'),
       single_file_support = true,
@@ -258,7 +292,7 @@ lspconfig.velvet.setup({})
 On Windows, replace the `cmd` path with the actual location of `velvet.exe`, for example:
 
 ```lua
-cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe') },
+cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe'), '--stdio' },
 ```
 
 Verify the server attached with `:checkhealth lsp` or `:LspInfo` — you should see `velvet` listed as attached to the current buffer. Once attached, all default Neovim LSP keymaps work without any additional configuration.
