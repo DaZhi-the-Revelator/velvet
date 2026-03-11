@@ -250,13 +250,35 @@ Point `velvet.serverPath` at the binary:
 
 ### Neovim
 
-Configure `nvim-lspconfig` to use the velvet binary:
+`nvim-lspconfig`'s built-in `v_analyzer` config hardcodes the binary name `v-analyzer`, so pointing it at `velvet` will silently fail — the server never attaches, and none of the default LSP keymaps (`gra`, `grr`, `grn`, `gri`, `grt`, `gO`) activate.
+
+Instead, register velvet as a **new** server config before calling `setup`:
 
 ```lua
-require('lspconfig').v_analyzer.setup({
-    cmd = { '/path/to/velvet' },
-})
+local lspconfig = require('lspconfig')
+local configs = require('lspconfig.configs')
+
+if not configs.velvet then
+  configs.velvet = {
+    default_config = {
+      cmd = { vim.fn.expand('~/.local/bin/velvet') }, -- adjust path as needed
+      filetypes = { 'v', 'vsh', 'vv' },
+      root_dir = lspconfig.util.root_pattern('v.mod', '.git'),
+      single_file_support = true,
+    },
+  }
+end
+
+lspconfig.velvet.setup({})
 ```
+
+On Windows, replace the `cmd` path with the actual location of `velvet.exe`, for example:
+
+```lua
+cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe') },
+```
+
+Verify the server attached with `:checkhealth lsp` or `:LspInfo` — you should see `velvet` listed as attached to the current buffer. Once attached, all default Neovim LSP keymaps work without any additional configuration.
 
 Any editor that supports the Language Server Protocol can use velvet by pointing its LSP client at the binary.
 
