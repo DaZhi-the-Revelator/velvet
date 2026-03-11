@@ -240,6 +240,19 @@ velvet works with both **Neovim 0.11+** (native `vim.lsp` API) and older setups 
 Neovim 0.11 introduced a built-in LSP configuration API that does not require nvim-lspconfig. Add the following to your `init.lua`:
 
 ```lua
+-- Step 1: register the V filetype.
+-- Neovim does not ship a built-in filetype for .v files (the extension is
+-- ambiguous — Verilog also uses .v). Without this, vim.lsp.enable() silently
+-- never attaches because no buffer ever receives the 'v' filetype.
+vim.filetype.add({
+  extension = {
+    v   = 'v',
+    vsh = 'v',
+    vv  = 'v',
+  },
+})
+
+-- Step 2: configure and enable velvet.
 vim.lsp.config('velvet', {
   cmd = { vim.fn.expand('~/.local/bin/velvet'), '--stdio' },
   filetypes = { 'v', 'vsh', 'vv' },
@@ -252,11 +265,27 @@ vim.lsp.enable('velvet')
 
 > **`root_markers` is a flat list**, not a nested table. Wrapping entries in an inner table (e.g. `{ { 'v.mod' }, '.git' }`) causes Neovim to treat each marker group as a conjunction — if your project has no `v.mod`, the group fails and the server never attaches. Use a flat list so velvet attaches in any V project, with or without a module file.
 
-Verify with `:checkhealth vim.lsp` — you should see velvet listed under **Active Clients**.
+> **`vim.lsp.enable()` only attaches to buffers whose filetype matches.** `:checkhealth vim.lsp` reports "No active clients" if you run it without a V file open. Open a `.v` file first, then run `:checkhealth vim.lsp` — velvet should appear under **Active Clients**.
+
+Verify the server is attached:
+
+1. Open a `.v` file.
+2. Run `:checkhealth vim.lsp` — velvet should appear under **Active Clients**.
+3. Alternatively, run `:lua vim.print(vim.lsp.get_clients())` — you should see a table entry for velvet.
+
+If velvet still does not appear, confirm the filetype was detected: run `:set ft?` while a `.v` file is open. It should print `filetype=v`. If it prints `filetype=verilog` or is blank, the `vim.filetype.add` block above is missing or loaded too late.
 
 On Windows, expand the path to `velvet.exe`:
 
 ```lua
+vim.filetype.add({
+  extension = {
+    v   = 'v',
+    vsh = 'v',
+    vv  = 'v',
+  },
+})
+
 vim.lsp.config('velvet', {
   cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe'), '--stdio' },
   filetypes = { 'v', 'vsh', 'vv' },
