@@ -106,17 +106,19 @@ All features from the upstream v-analyzer are preserved. The full capability set
 
 ## Building from Source
 
-> **This repository uses Git submodules.** Clone with:
+> **This repository uses nested Git submodules.** Clone with:
 >
 > ```sh
-> git clone --recursive https://github.com/DaZhi-the-Revelator/velvet
+> git clone --recurse-submodules https://github.com/DaZhi-the-Revelator/velvet
 > ```
 >
-> Or, if you already cloned without `--recursive`:
+> Or, if you already cloned without `--recurse-submodules`:
 >
 > ```sh
-> git submodule init && git submodule update
+> git submodule update --init --recursive
 > ```
+>
+> This initialises both `tree_sitter_v` (the V grammar) and the nested `tree_sitter_v/bindings/core` submodule (the tree-sitter C runtime). **Omitting `--recursive` is the most common cause of build failures** (`tree_sitter/api.h` not found).
 >
 > **On Windows, use GCC.** TCC can run into issues with some generated C code.
 
@@ -283,7 +285,7 @@ velvet/
 │   lsp/
 │       ├── selection_range.v     # ← addition: SelectionRangeParams / SelectionRange types
 │       └── ...
-├── tree_sitter_v/                # Git submodule — V grammar for Tree-sitter
+├── tree_sitter_v/                # Git submodule — https://github.com/DaZhi-the-Revelator/tree-sitter-v
 ├── build.vsh                     # Build script
 └── install.vsh                   # Install script
 ```
