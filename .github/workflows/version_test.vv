@@ -1,0 +1,26 @@
+import os
+import v.vmod
+
+fn test_version() {
+	if os.getenv('CI') != 'true' {
+		eprintln('WARNING: expecting usage in combination with CI workflow.')
+	}
+
+	for k, v in os.environ() {
+		println('>>> env key: ${k} | value: ${v}')
+	}
+
+	sha := os.getenv('GITHUB_WORKFLOW_SHA')
+	assert sha.len > 10
+	git_ref := sha.trim_space()[..7]
+
+	manifest := vmod.decode(@VMOD_FILE)!
+	assert manifest.name == 'velvet'
+
+	// Move out of the project directory to ensure that we exclude the possibility of
+	// deriving the commit reference from velvet's directory at program startup.
+	os.chdir('/tmp/')!
+	velvet_version := os.execute_opt('velvet --version')!.output.all_after_last(' ').trim_space()
+
+	assert '${manifest.version}.${git_ref}' == velvet_version
+}

@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 General Questions and Answers about velvet
+    url: https://github.com/DaZhi-the-Revelator/velvet/discussions/categories/q-a
+    about: You can ask and answer questions about velvet in the discussions forum.
+
+  - name: 💬 V Discord Server
+    url: https://discord.gg/vlang
+    about: You can join the V Discord server for real time discussion and support.

@@ -1,0 +1,66 @@
+name: Analyzer CI
+
+on:
+  push:
+    paths-ignore:
+      - '.github/**'
+      - '!**/analyzer_tests.yml'
+      - '!**/version_test.vv'
+      - 'editors/code/**'
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - '.github/**'
+      - '!**/analyzer_tests.yml'
+      - '!**/version_test.vv'
+      - 'editors/code/**'
+      - '**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            cc: clang
+          - os: ubuntu-latest
+            cc: gcc
+          - os: windows-latest
+            cc: gcc
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    env:
+      VFLAGS: -cg -cc ${{ matrix.cc }}
+
+    steps:
+      - name: Install V
+        id: install-v
+        uses: vlang/setup-v@v1.4
+        with:
+          check-latest: true
+
+      - name: Checkout velvet
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run tests
+        run: v test .
+
+      - name: Install velvet
+        if: runner.os != 'Windows'
+        run: |
+          # Build and install velvet at the head ref of the submitted changes.
+          v build.vsh
+          sudo mv ./bin/velvet /usr/local/bin/velvet
+          velvet --version
+
+      - name: Verify version
+        # TODO: include Windows
+        if: runner.os != 'Windows'
+        run: v .github/workflows/version_test.vv

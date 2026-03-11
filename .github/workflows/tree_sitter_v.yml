@@ -1,0 +1,64 @@
+name: Tree-sitter CI
+
+on:
+  push:
+    paths:
+      - 'tree_sitter_v/**'
+      - '**/test_tree_sitter_v.yml'
+  pull_request:
+    paths:
+      - 'tree_sitter_v/**'
+      - '**/test_tree_sitter_v.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  test-grammar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tree_sitter_v
+
+    steps:
+      - name: Checkout velvet
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm update
+
+      - name: Run tests
+        run: npm run test
+
+  test-bindings:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install V
+        id: install-v
+        uses: vlang/setup-v@v1.4
+        with:
+          check-latest: true
+
+      - name: Checkout velvet
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run tests
+        run: v test tree_sitter_v/bindings
+
+      - name: Run examples
+        run: |
+          cd tree_sitter_v
+          exit_code=0
+          for example in $(find -wholename '*/examples/*.v'); do
+            v run $example
+            if [ $? -ne 0 ]; then
+              exit_code=1
+              echo $exit_code
+              echo "Failed to run example \`$example\`"
+            fi
+          done
+          exit $exit_code

@@ -1,0 +1,252 @@
+module semantic
+
+import lsp
+import utils
+import analyzer.psi
+
+// DumbAwareSemanticVisitor is a highly optimized visitor that collects information about
+// semantic tokens in a file based only on their syntax tree.
+// This annotator must not call resolve or use indexes.
+pub struct DumbAwareSemanticVisitor {
+	start      u32  // start offset when request range is specified
+	end        u32  // end offset when request range is specified
+	with_range bool // whether request range is specified
+}
+
+pub fn new_dumb_aware_semantic_visitor(range lsp.Range, containing_file &psi.PsiFile) DumbAwareSemanticVisitor {
+	start := utils.compute_offset(containing_file.source_text, range.start.line, range.start.character)
+	end := utils.compute_offset(containing_file.source_text, range.end.line, range.end.character)
+
+	return DumbAwareSemanticVisitor{
+		with_range: !range.is_empty()
+		start:      u32(start)
+		end:        u32(end)
+	}
+}
+
+pub fn (v DumbAwareSemanticVisitor) accept(root psi.PsiElement) []SemanticToken {
+	mut result := []SemanticToken{cap: 500}
+	mut walker := psi.new_tree_walker(root.node())
+	defer { walker.free() }
+
+	for {
+		node := walker.next() or { break }
+		range := node.range()
+		if v.with_range && (range.end_byte <= v.start || range.start_byte >= v.end) {
+			continue
+		}
+
+		v.highlight_node(node, root, mut result)
+	}
+
+	return result
+}
+
+@[inline]
+fn (_ DumbAwareSemanticVisitor) highlight_node(node psi.AstNode, root psi.PsiElement, mut result []SemanticToken) {
+	containing_file := root.containing_file() or { return }
+	source_text := containing_file.source_text
+
+	match node.type_name {
+		.enum_field_definition {
+			if first_child := node.first_child() {
+				result << element_to_semantic(first_child, .enum_member)
+			}
+		}
+		.field_name {
+			result << element_to_semantic(node, .property)
+		}
+		.range_clause {
+			if first_child := node.first_child() {
+				result << element_to_semantic(first_child, .property)
+			}
+		}
+		.struct_field_declaration {
+			if first_child := node.first_child() {
+				if first_child.type_name != .embedded_definition {
+					result << element_to_semantic(first_child, .property)
+				}
+			}
+		}
+		.module_clause {
+			if last_child := node.last_child() {
+				result << element_to_semantic(last_child, .namespace)
+			}
+		}
+		.attribute {
+			// '['
+			if first_child := node.first_child() {
+				result << element_to_semantic(first_child, .decorator)
+			}
+			// ']'
+			if last_child := node.last_child() {
+				result << element_to_semantic(last_child, .decorator)
+			}
+		}
+		.key_value_attribute {
+			if value_child := node.child_by_field_name('value') {
+				if value_child.type_name == .identifier {
+					result << element_to_semantic(value_child, .string)
+				}
+			}
+		}
+		.qualified_type {
+			if first_child := node.first_child() {
+				result << element_to_semantic(first_child, .namespace)
+			}
+			if last_child := node.last_child() {
+				result << element_to_semantic(last_child, .type_)
+			}
+		}
+		.unknown {
+			text := node.text(source_text)
+			if text == 'sql' {
+				if parent := node.parent() {
+					if parent.type_name == .sql_expression {
+						result << element_to_semantic(node, .keyword)
+					}
+				}
+			} else if text == 'chan' {
+				if parent := node.parent() {
+					if parent.type_name == .channel_type {
+						result << element_to_semantic(node, .keyword)
+					}
+				}
+			} else if text == 'thread' {
+				if parent := node.parent() {
+					if parent.type_name == .thread_type {
+						result << element_to_semantic(node, .keyword)
+					}
+				}
+			} else if text == 'implements' {
+				if parent := node.parent() {
+					if parent.type_name in [.struct_declaration, .interface_declaration,
+						.implements_clause] {
+						result << element_to_semantic(node, .keyword)
+					}
+				}
+			}
+		}
+		.enum_declaration {
+			if identifier := node.child_by_field_name('name') {
+				result << element_to_semantic(identifier, .enum_)
+			}
+		}
+		.interface_declaration {
+			if identifier := node.child_by_field_name('name') {
+				result << element_to_semantic(identifier, .interface_)
+			}
+		}
+		.parameter_declaration, .receiver {
+			if identifier := node.child_by_field_name('name') {
+				if _ := node.child_by_field_name('mutability') {
+					result << element_to_semantic(identifier, .parameter, 'mutable')
+				} else {
+					result << element_to_semantic(identifier, .parameter)
+				}
+			}
+		}
+		.reference_expression {
+			def := psi.node_to_var_definition(node, containing_file, none)
+			if !isnil(def) {
+				if def.is_mutable() {
+					result << element_to_semantic(node, .variable, 'mutable')
+				} else {
+					result << element_to_semantic(node, .variable)
+				}
+			}
+
+			first_char := node.first_char(source_text)
+			if first_char == `@` || first_char == `$` {
+				result << element_to_semantic(node, .property) // not a best variant...
+			}
+		}
+		.const_definition {
+			if name := node.child_by_field_name('name') {
+				result << element_to_semantic(name, .property) // not a best variant...
+			}
+		}
+		.import_path {
+			count := node.child_count()
+			for i in 0 .. count {
+				if child := node.child(i) {
+					if child.type_name == .import_name {
+						result << element_to_semantic(child, .namespace)
+					}
+				}
+			}
+		}
+		.import_alias {
+			if last_child := node.last_child() {
+				result << element_to_semantic(last_child, .namespace)
+			}
+		}
+		.compile_time_if_expression {
+			if condition := node.child_by_field_name('condition') {
+				highlight_compile_time_condition(condition, mut result)
+			}
+		}
+		.asm_statement {
+			if first := node.first_child() {
+				result << element_to_semantic(first, .keyword)
+			}
+			if modifier := node.child_by_field_name('modifiers') {
+				result << element_to_semantic(modifier, .keyword)
+			}
+			if arch := node.child_by_field_name('arch') {
+				result << element_to_semantic(arch, .variable, 'readonly', 'defaultLibrary')
+			}
+		}
+		.interpolation_opening, .interpolation_closing {
+			result << element_to_semantic(node, .keyword)
+		}
+		.generic_parameter {
+			result << element_to_semantic(node, .type_parameter)
+		}
+		.variadic_parameter {
+			result << element_to_semantic(node, .operator)
+		}
+		.global_var_definition {
+			if identifier := node.child_by_field_name('name') {
+				result << element_to_semantic(identifier, .variable, 'global')
+			}
+			if modifiers := node.child_by_field_name('modifiers') {
+				result << element_to_semantic(modifiers, .keyword)
+			}
+		}
+		.function_declaration {
+			if first_child := node.child_by_field_name('name') {
+				first_char := first_child.first_char(source_text)
+				if first_char in [`@`, `$`] {
+					// tweak highlighting for @lock/@rlock
+					result << element_to_semantic(first_child, .function)
+				}
+			}
+		}
+		else {
+			$if debug {
+				// this useful for finding errors in parsing
+				if node.type_name == .error {
+					result << element_to_semantic(node, .namespace, 'mutable')
+				}
+			}
+		}
+	}
+}
+
+fn highlight_compile_time_condition(node psi.AstNode, mut result []SemanticToken) {
+	if node.type_name == .reference_expression {
+		result << element_to_semantic(node, .variable, 'readonly', 'defaultLibrary')
+	} else if node.type_name == .binary_expression || node.type_name == .unary_expression {
+		count := node.child_count()
+		for i in 0 .. count {
+			if child := node.child(i) {
+				highlight_compile_time_condition(child, mut result)
+			}
+		}
+	} else if node.type_name == .parenthesized_expression {
+		if child := node.child(1) {
+			highlight_compile_time_condition(child, mut result)
+		}
+	}
+}
