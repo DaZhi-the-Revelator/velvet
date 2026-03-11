@@ -293,7 +293,7 @@ fn get_latest_commit_hash() !string {
 const git_clone_options = '--filter=blob:none --recursive --shallow-submodules'
 
 fn install_from_sources(no_interaction bool) ! {
-	println('${term.yellow('[WARNING]')} Currently ${term.bold('v-analyzer')} has no prebuilt binaries for your platform')
+	println('${term.yellow('[WARNING]')} Currently ${term.bold('velvet')} has no prebuilt binaries for your platform')
 
 	// Used primarily for VS Code extension
 	if !(is_github_job || no_interaction) {

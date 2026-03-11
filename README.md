@@ -161,7 +161,7 @@ Verify the installation:
 
 ```sh
 velvet --version
-# velvet version 0.0.6
+# velvet version 0.1.0
 ```
 
 ---
@@ -188,13 +188,7 @@ velvet is configured via a global or per-project TOML file.
 ~/.config/velvet/config.toml
 ```
 
-**Per-project config** — create with:
-
-```sh
-velvet init
-```
-
-This writes `.velvet/config.toml` at your project root. Key settings:
+**Per-project config** — create a `.v-analyzer/config.toml` file at your project root (velvet looks for this path automatically). Key settings:
 
 ```toml
 # Path to your V installation (set this if velvet can't find V automatically)
@@ -214,6 +208,13 @@ enable_range_hints = true
 enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
+
+[code_lens]
+enable = true
+enable_run_lens = true
+enable_inheritors_lens = true
+enable_super_interfaces_lens = true
+enable_run_tests_lens = true
 ```
 
 ---
