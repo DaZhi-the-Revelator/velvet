@@ -2,8 +2,6 @@
 
 **V Enhanced Language and Tooling** — a maintained fork of [vlang/v-analyzer](https://github.com/vlang/v-analyzer), renamed to reflect the scope of changes diverged from upstream. Created to power the [V Enhanced](https://github.com/DaZhi-the-Revelator/zed-v-enhanced) Zed extension.
 
-**version 0.1.0**
-
 ---
 
 ## Table of Contents
@@ -262,9 +260,9 @@ vim.lsp.enable('velvet')
 ```
 
 > **Important:** Always pass `--stdio` explicitly in `cmd`. Neovim's native LSP client starts the server process and pipes stdio without passing any command-line flags of its own — velvet defaults to stdio internally, but some environments require the flag to be explicit for the handshake to complete.
-
+>
 > **`root_markers` is a flat list**, not a nested table. Wrapping entries in an inner table (e.g. `{ { 'v.mod' }, '.git' }`) causes Neovim to treat each marker group as a conjunction — if your project has no `v.mod`, the group fails and the server never attaches. Use a flat list so velvet attaches in any V project, with or without a module file.
-
+>
 > **`vim.lsp.enable()` only attaches to buffers whose filetype matches.** `:checkhealth vim.lsp` reports "No active clients" if you run it without a V file open. Open a `.v` file first, then run `:checkhealth vim.lsp` — velvet should appear under **Active Clients**.
 
 Verify the server is attached:
