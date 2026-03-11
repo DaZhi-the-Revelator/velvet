@@ -100,8 +100,6 @@ All features from the upstream v-analyzer are preserved. The full capability set
 - **Code actions** — Make Mutable, Make Public, Add `[heap]`, Add `[flag]`, Import Module, Remove Unused Import
 - **Diagnostics** — real V compiler errors, warnings, and notices; unused symbols tagged with `DiagnosticTag.unnecessary`, deprecated symbols with `DiagnosticTag.deprecated`
 
-> **Note:** Code lens is implemented in the server but disabled — the lens commands it emits (`v-analyzer.showReferences`, `v-analyzer.runWorkspace`, etc.) are not handled by any supported editor extension, so lenses would appear but be non-functional.
-
 ---
 
 ## Building from Source
