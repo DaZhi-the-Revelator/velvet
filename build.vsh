@@ -1,6 +1,6 @@
 #!/usr/bin/env -S v
 
-// This script is used to build the v-analyzer binary.
+// This script is used to build the velvet binary.
 // Usage: `v build.vsh [debug|dev|release]`
 // By default, doing just `v build.vsh` will use debug mode.
 import os
@@ -93,7 +93,7 @@ fn (m ReleaseMode) compile_cmd() string {
 	$if !windows {
 		// Treesitter's generated C code uses gotos;
 		// Older V versions of the json codegen generated `if(cond) \nstatement; statement2;` with wrong indentation, instead of blocks;
-		// => Adding the flags below allows v-analyzer to be compiled with -cstrict, and wider range of supported C compilers
+		// => Adding the flags below allows velvet to be compiled with -cstrict, and wider range of supported C compilers
 		resulting_cmd += ' -cflags "-Wno-misleading-indentation -Wno-jump-misses-init -Wno-error=jump-misses-init -Wno-typedef-redefinition"'
 	}
 	return resulting_cmd
@@ -135,7 +135,7 @@ fn build(mode ReleaseMode, explicit_debug bool) {
 	}
 
 	os.execute_opt(cmd) or {
-		eline('Failed to build v-analyzer')
+		eline('Failed to build velvet')
 		eprintln(err)
 		exit(1)
 	}
@@ -163,34 +163,34 @@ mut cmd := cli.Command{
 	}
 }
 
-// debug builds the v-analyzer binary in debug mode.
+// debug builds the velvet binary in debug mode.
 // This is the default mode.
 // Thanks to -d use_libbacktrace, the binary will print beautiful stack traces,
 // which is very useful for debugging.
 cmd.add_command(cli.Command{
 	name:        'debug'
-	description: 'Builds the v-analyzer binary in debug mode.'
+	description: 'Builds the velvet binary in debug mode.'
 	execute:     fn (_ cli.Command) ! {
 		build(.debug, true)
 	}
 })
 
-// dev builds the v-analyzer binary in development mode.
+// dev builds the velvet binary in development mode.
 // In this mode, additional development features are enabled.
 cmd.add_command(cli.Command{
 	name:        'dev'
-	description: 'Builds the v-analyzer binary in development mode.'
+	description: 'Builds the velvet binary in development mode.'
 	execute:     fn (_ cli.Command) ! {
 		build(.dev, false)
 	}
 })
 
-// release builds the v-analyzer binary in release mode.
+// release builds the velvet binary in release mode.
 // This is the recommended mode for production use.
 // It is about 30-40% faster than debug mode.
 cmd.add_command(cli.Command{
 	name:        'release'
-	description: 'Builds the v-analyzer binary in release mode.'
+	description: 'Builds the velvet binary in release mode.'
 	execute:     fn (_ cli.Command) ! {
 		build(.release, false)
 	}

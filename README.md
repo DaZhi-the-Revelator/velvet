@@ -2,6 +2,8 @@
 
 **V Enhanced Language and Tooling** — a maintained fork of [vlang/v-analyzer](https://github.com/vlang/v-analyzer), renamed to reflect the scope of changes diverged from upstream. Created to power the [V Enhanced](https://github.com/DaZhi-the-Revelator/zed-v-enhanced) Zed extension.
 
+**version 0.1.0**
+
 ---
 
 ## Table of Contents
