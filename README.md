@@ -16,6 +16,8 @@
 - [Editor Support](#editor-support)
   - [Zed](#zed)
   - [Neovim](#neovim)
+- [Troubleshooting](#troubleshooting)
+  - [Default keymaps produce nothing (grt, grr, grn, gO)](#default-keymaps-produce-nothing-grt-grr-grn-go)
 - [Relationship to Upstream](#relationship-to-upstream)
 - [Authors](#authors)
 - [License](#license)
@@ -325,6 +327,66 @@ cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe'), '--stdio' }
 Verify the server attached with `:checkhealth lsp` or `:LspInfo` — you should see `velvet` listed as attached to the current buffer. Once attached, all default Neovim LSP keymaps work without any additional configuration.
 
 Any editor that supports the Language Server Protocol can use velvet by pointing its LSP client at the binary.
+
+---
+
+## Troubleshooting
+
+### Default keymaps produce nothing (grt, grr, grn, gO)
+
+The Neovim default LSP keymaps (`grt` = type definition, `grr` = references, `grn` = rename, `gO` = document symbols, `gri` = implementation, `gra` = code action) only activate when velvet is **actually attached to the current buffer**. The server process appearing to start is not sufficient — it must complete the LSP handshake and attach.
+
+Work through these steps in order:
+
+**Step 1 — Confirm attachment**
+
+Open a `.v` file, then run:
+
+```
+:lua vim.print(vim.lsp.get_clients({ bufnr = 0 }))
+```
+
+You should see a table with a `name = "velvet"` entry. If the table is empty, velvet is not attached to the buffer — the keymaps will never fire. Continue to the steps below to find out why.
+
+**Step 2 — Check the filetype**
+
+Run `:set ft?` while a `.v` file is open. It must print `filetype=v`.
+
+- If it prints `filetype=verilog` or is blank, Neovim has not detected the V filetype. Add the `vim.filetype.add` block from the Neovim setup section to your `init.lua` and ensure it is loaded before `vim.lsp.enable('velvet')` or `lspconfig.velvet.setup({})` is called.
+- `.v` is ambiguous — Verilog also uses it, and without explicit registration, Neovim may silently pick the wrong filetype or none at all.
+
+**Step 3 — nvim-lspconfig users: do not use `lspconfig.v_analyzer.setup()`**
+
+The built-in `v_analyzer` config hardcodes `cmd = { 'v-analyzer' }`. Using it for velvet means Neovim tries to launch the wrong binary (or nothing, if `v-analyzer` is not on your PATH). Velvet never starts, so the keymaps never work.
+
+Register velvet as a **new** config using `configs.velvet = { ... }` as shown in the [nvim-lspconfig section](#older-neovim-nvim-lspconfig) above. Do not call `lspconfig.v_analyzer.setup({})` alongside it.
+
+**Step 4 — Verify `--stdio` is in `cmd`**
+
+Ensure your `cmd` table includes `'--stdio'` as the second element:
+
+```lua
+cmd = { '/path/to/velvet', '--stdio' },
+```
+
+Without `--stdio`, the handshake may fail silently on some systems, leaving the server running but unattached.
+
+**Step 5 — Check root detection**
+
+Velvet must find a root marker to attach. Run:
+
+```
+:lua vim.print(vim.lsp.get_clients({ bufnr = 0 })[1].root_dir)
+```
+
+It should print your project root. If it prints `nil`, velvet could not find a root marker.
+
+- Ensure `root_markers = { 'v.mod', '.git' }` is a **flat list**, not a nested table. Using `{ { 'v.mod' }, '.git' }` treats each inner table as a conjunction — if `v.mod` is absent, that group fails entirely.
+- If your project has neither a `v.mod` nor a `.git`, add `single_file_support = true` (nvim-lspconfig) or open the file from within a directory that has one.
+
+**Step 6 — Check `:checkhealth vim.lsp`**
+
+Run `:checkhealth vim.lsp` **with a `.v` file open**. If you run it without a V buffer active, it will report no clients — that is expected. With a V file open, velvet should appear under **Active Clients**. Any warnings or errors reported by checkhealth will point at the remaining misconfiguration.
 
 ---
 
