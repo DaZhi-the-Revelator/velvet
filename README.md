@@ -338,7 +338,7 @@ CLion 2023.2 and later include built-in LSP support — no plugin is required. F
 #### CLion 2023.2+ (built-in LSP)
 
 1. Open **Settings** → **Languages & Frameworks** → **Language Server Protocol**.
-2. If **Language Server Protocol** is not listed, install the [LSP4IL plugin](https://github.com/redhat-developer/lsp4ij/tree/main)
+2. If **Language Server Protocol** is not listed, install the [LSP4IJ plugin](https://github.com/redhat-developer/lsp4ij/tree/main)
 3. Click **+** to add a new server.
 4. Fill in the fields:
 
