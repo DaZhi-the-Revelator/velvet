@@ -16,6 +16,7 @@
 - [Editor Support](#editor-support)
   - [Zed](#zed)
   - [Neovim](#neovim)
+  - [CLion](#clion)
 - [Troubleshooting](#troubleshooting)
   - [Default keymaps produce nothing (grt, grr, grn, gO)](#default-keymaps-produce-nothing-grt-grr-grn-go)
 - [Relationship to Upstream](#relationship-to-upstream)
@@ -328,6 +329,61 @@ Verify the server attached with `:checkhealth lsp` or `:LspInfo` — you should 
 
 Any editor that supports the Language Server Protocol can use velvet by pointing its LSP client at the binary.
 
+### CLion
+
+CLion 2023.2 and later include built-in LSP support — no plugin is required. For earlier versions, install the **LSP Support** plugin from the JetBrains Marketplace first.
+
+> **Note:** CLion has no built-in syntax highlighting for V. All LSP features (completion, hover, go-to-definition, find references, rename, diagnostics, etc.) will work correctly, but the editor will not colour the source as V-specific syntax — it will fall back to plain text highlighting.
+
+#### CLion 2023.2+ (built-in LSP)
+
+1. Open **Settings** → **Languages & Frameworks** → **Language Server Protocol**.
+2. If **Language Server Protocol** is not listed, install the [LSP4IL plugin](https://github.com/redhat-developer/lsp4ij/tree/main)
+3. Click **+** to add a new server.
+4. Fill in the fields:
+
+   | Field | Value |
+   |---|---|
+   | Name | `velvet` |
+   | Command | Path to the velvet binary (see below) |
+   | File name patterns | `*.v;*.vsh;*.vv` |
+
+   **Linux / macOS:**
+
+   ```txt
+   /home/<you>/.local/bin/velvet
+   ```
+
+   **Windows:**
+
+   ```txt
+   C:\Users\<you>\.config\velvet\bin\velvet.exe
+   ```
+
+5. Leave the **Working directory** blank — CLion will use the project root automatically.
+6. Click **OK** and restart CLion if prompted.
+
+No `--stdio` flag is needed in the command. velvet defaults to stdio transport internally.
+
+#### Older CLion (LSP Support plugin)
+
+1. Install the **LSP Support** plugin: **Settings** → **Plugins** → search for `LSP Support` → **Install** → restart CLion.
+2. After restart, open **Settings** → **Languages & Frameworks** → **LSP Support** → **Server Definitions**.
+3. Set the **Extension** to `v` and the **Path** to the velvet binary.
+4. Repeat for the `vsh` and `vv` extensions if needed.
+5. Click **OK**.
+
+#### Verifying the connection
+
+Open a V project in CLion and open any `.v` file. Check the status bar at the bottom of the editor window — an LSP indicator should appear. You can also open the **Event Log** (**View** → **Tool Windows** → **Event Log**) and look for a message confirming the language server started.
+
+Test that features are working:
+
+- **Hover** — hold the cursor over a function or struct name; a documentation popup should appear.
+- **Completion** — type inside a function body and trigger completion with **Ctrl+Space**; velvet's suggestions should appear.
+- **Go to Definition** — place the cursor on a symbol and press **Ctrl+B** (or **Ctrl+Click**); CLion should navigate to the declaration.
+- **Diagnostics** — introduce a type error; a red underline and error tooltip should appear after a short delay.
+
 ---
 
 ## Troubleshooting
@@ -338,30 +394,30 @@ The Neovim default LSP keymaps (`grt` = type definition, `grr` = references, `gr
 
 Work through these steps in order:
 
-**Step 1 — Confirm attachment**
+#### Step 1 — Confirm attachment
 
 Open a `.v` file, then run:
 
-```
+```vim
 :lua vim.print(vim.lsp.get_clients({ bufnr = 0 }))
 ```
 
 You should see a table with a `name = "velvet"` entry. If the table is empty, velvet is not attached to the buffer — the keymaps will never fire. Continue to the steps below to find out why.
 
-**Step 2 — Check the filetype**
+#### Step 2 — Check the filetype
 
 Run `:set ft?` while a `.v` file is open. It must print `filetype=v`.
 
 - If it prints `filetype=verilog` or is blank, Neovim has not detected the V filetype. Add the `vim.filetype.add` block from the Neovim setup section to your `init.lua` and ensure it is loaded before `vim.lsp.enable('velvet')` or `lspconfig.velvet.setup({})` is called.
 - `.v` is ambiguous — Verilog also uses it, and without explicit registration, Neovim may silently pick the wrong filetype or none at all.
 
-**Step 3 — nvim-lspconfig users: do not use `lspconfig.v_analyzer.setup()`**
+#### Step 3 — nvim-lspconfig users: do not use `lspconfig.v_analyzer.setup()`
 
 The built-in `v_analyzer` config hardcodes `cmd = { 'v-analyzer' }`. Using it for velvet means Neovim tries to launch the wrong binary (or nothing, if `v-analyzer` is not on your PATH). Velvet never starts, so the keymaps never work.
 
 Register velvet as a **new** config using `configs.velvet = { ... }` as shown in the [nvim-lspconfig section](#older-neovim-nvim-lspconfig) above. Do not call `lspconfig.v_analyzer.setup({})` alongside it.
 
-**Step 4 — Verify `--stdio` is in `cmd`**
+#### Step 4 — Verify `--stdio` is in `cmd`
 
 Ensure your `cmd` table includes `'--stdio'` as the second element:
 
@@ -371,11 +427,11 @@ cmd = { '/path/to/velvet', '--stdio' },
 
 Without `--stdio`, the handshake may fail silently on some systems, leaving the server running but unattached.
 
-**Step 5 — Check root detection**
+#### Step 5 — Check root detection
 
 Velvet must find a root marker to attach. Run:
 
-```
+```vim
 :lua vim.print(vim.lsp.get_clients({ bufnr = 0 })[1].root_dir)
 ```
 
@@ -384,7 +440,7 @@ It should print your project root. If it prints `nil`, velvet could not find a r
 - Ensure `root_markers = { 'v.mod', '.git' }` is a **flat list**, not a nested table. Using `{ { 'v.mod' }, '.git' }` treats each inner table as a conjunction — if `v.mod` is absent, that group fails entirely.
 - If your project has neither a `v.mod` nor a `.git`, add `single_file_support = true` (nvim-lspconfig) or open the file from within a directory that has one.
 
-**Step 6 — Check `:checkhealth vim.lsp`**
+#### Step 6 — Check `:checkhealth vim.lsp`
 
 Run `:checkhealth vim.lsp` **with a `.v` file open**. If you run it without a V buffer active, it will report no clients — that is expected. With a V file open, velvet should appear under **Active Clients**. Any warnings or errors reported by checkhealth will point at the remaining misconfiguration.
 
