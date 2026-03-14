@@ -31,6 +31,26 @@
 
 #### Richer Hover Documentation
 
+**Interface hover** now renders the full interface body with methods and fields:
+
+```txt
+Module: **main**
+```v
+interface Animal {
+	name string
+	sound() string
+	move()
+}
+```
+
+Previously, hovering an interface showed only:
+
+```txt
+Module: **main**
+```v
+interface Animal
+```
+
 **Struct hover** now renders the full struct body, not just the name. Fields are grouped by access modifier and displayed with their types:
 
 ```txt
@@ -207,6 +227,13 @@ enable_range_hints = true
 enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
+
+[code_lens]
+enable = true
+enable_run_lens = true
+enable_inheritors_lens = true
+enable_super_interfaces_lens = true
+enable_run_tests_lens = true
 
 ```
 

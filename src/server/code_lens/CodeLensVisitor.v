@@ -72,7 +72,7 @@ pub fn (mut v CodeLensVisitor) add_run_test_lens(node psi.AstNode) {
 
 	v.add_lens(node, lsp.Command{
 		title:     '▶ Run test'
-		command:   'v-analyzer.runTests'
+		command:   'velvet.runTests'
 		arguments: [
 			v.uri.path(),
 			name,
@@ -82,7 +82,7 @@ pub fn (mut v CodeLensVisitor) add_run_test_lens(node psi.AstNode) {
 	if !v.first_test_seen {
 		v.add_lens(node, lsp.Command{
 			title:     'all file tests'
-			command:   'v-analyzer.runTests'
+			command:   'velvet.runTests'
 			arguments: [
 				v.uri.path(),
 			]
@@ -107,14 +107,14 @@ pub fn (mut v CodeLensVisitor) add_run_lens(node psi.AstNode) {
 
 	v.add_lens(node, lsp.Command{
 		title:     '▶ Run workspace'
-		command:   'v-analyzer.runWorkspace'
+		command:   'velvet.runWorkspace'
 		arguments: [
 			v.uri.path(),
 		]
 	})
 	v.add_lens(node, lsp.Command{
 		title:     'single file'
-		command:   'v-analyzer.runFile'
+		command:   'velvet.runFile'
 		arguments: [
 			v.uri.path(),
 		]
@@ -142,7 +142,7 @@ pub fn (mut v CodeLensVisitor) add_interface_implementations_lens(node psi.AstNo
 
 		v.add_lens(node, lsp.Command{
 			title:     lens_title
-			command:   'v-analyzer.showReferences'
+			command:   'velvet.showReferences'
 			arguments: [
 				v.uri.path(),
 				json.encode(lsp.Position{
@@ -175,7 +175,7 @@ pub fn (mut v CodeLensVisitor) add_super_interfaces_lens(node psi.AstNode) {
 
 		v.add_lens(node, lsp.Command{
 			title:     lens_title
-			command:   'v-analyzer.showReferences'
+			command:   'velvet.showReferences'
 			arguments: [
 				v.uri.path(),
 				json.encode(lsp.Position{

@@ -242,7 +242,35 @@ fn (mut p Provider) interface_documentation(element psi.InterfaceDeclaration) ? 
 	p.sb.write_string('interface ')
 	p.sb.write_string(element.name())
 	p.write_generic_parameters(element)
-	p.sb.write_string('\n')
+
+	p.sb.write_string(' {\n')
+
+	// Render embedded types first
+	for embedded in element.embedded_definitions() {
+		p.sb.write_string('\t${embedded.name()}\n')
+	}
+
+	// Render interface fields (non-method struct_field_declarations)
+	for field in element.own_fields() {
+		if field is psi.FieldDeclaration {
+			field_decl := field as &psi.FieldDeclaration
+			p.sb.write_string('\t${field_decl.get_text()}\n')
+		}
+	}
+
+	// Render interface methods
+	for method in element.methods() {
+		if method is psi.InterfaceMethodDeclaration {
+			method_decl := method as &psi.InterfaceMethodDeclaration
+			if sig := method_decl.signature() {
+				p.sb.write_string('\t${method_decl.name()}${sig.get_text()}\n')
+			} else {
+				p.sb.write_string('\t${method_decl.name()}()\n')
+			}
+		}
+	}
+
+	p.sb.write_string('}\n')
 	p.sb.write_string('```')
 	p.write_separator()
 	p.sb.write_string(element.doc_comment())

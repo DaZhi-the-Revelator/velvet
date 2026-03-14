@@ -232,11 +232,7 @@ pub fn (mut t Tester) documentation_test(name string, filepath string) {
 			return test.fail('Cannot get documentation at cursor')
 		}
 
-		if hover.contents !is lsp.MarkupContent {
-			return test.fail('Documentation is not a MarkupContent')
-		}
-
-		markup := hover.contents as lsp.MarkupContent
+		markup := hover.contents
 
 		if markup.kind != lsp.markup_kind_markdown {
 			return test.fail('Documentation is not a Markdown')

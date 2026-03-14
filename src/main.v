@@ -119,7 +119,7 @@ fn main() {
 
 	cmd.add_command(cli.Command{
 		name:        'check-updates'
-		description: 'Checks for v-analyzer updates.'
+		description: 'Checks for velvet updates.'
 		execute:     check_updates_cmd
 		posix_mode:  true
 		version:     metadata.full_version

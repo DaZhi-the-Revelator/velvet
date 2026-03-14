@@ -321,7 +321,7 @@ pub fn (mut ls LanguageServer) handle_jsonrpc(request &jsonrpc.Request, mut rw j
 			}
 			ls.execute_command(params)
 		}
-		'v-analyzer/viewStubTree' {
+		'velvet/viewStubTree' {
 			params := json.decode(lsp.TextDocumentIdentifier, request.params) or {
 				return w.wrap_error(err)
 			}

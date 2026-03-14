@@ -66,7 +66,7 @@ pub fn (mut ls LanguageServer) initialize(params lsp.InitializeParams, mut wr Re
 				retrigger_characters: [',', ' ']
 			}
 			// code_lens_provider intentionally omitted — lens commands
-			// (v-analyzer.showReferences, runWorkspace, etc.) are not
+			// (velvet.showReferences, runWorkspace, etc.) are not
 			// implemented by any supported editor extension.
 			inlay_hint_provider:          lsp.InlayHintOptions{}
 			semantic_tokens_provider:     lsp.SemanticTokensOptions{
@@ -499,7 +499,7 @@ pub fn (mut ls LanguageServer) exit() {
 	// == .shutdown => 0
 	// != .shutdown => 1
 	ecode := int(ls.status != .shutdown)
-	loglib.info('v-analyzer exiting with ${ls.status}, exit code: ${ecode}')
+	loglib.info('velvet exiting with ${ls.status}, exit code: ${ecode}')
 	exit(ecode)
 }
 
@@ -510,11 +510,11 @@ fn (mut ls LanguageServer) print_info(process_id int, client_info lsp.ClientInfo
 	} else {
 		'Unknown'
 	}
-	ls.client.log_message('v-analyzer version: ${metadata.manifest.version}, commit: ${metadata.build_commit}, OS: ${os.user_os()} x${arch}',
+	ls.client.log_message('velvet version: ${metadata.manifest.version}, commit: ${metadata.build_commit}, OS: ${os.user_os()} x${arch}',
 		.info)
-	ls.client.log_message('v-analyzer executable path: ${os.executable()}', .info)
-	ls.client.log_message('v-analyzer build with V ${@VHASH}', .info)
-	ls.client.log_message('v-analyzer build at ${metadata.build_datetime}', .info)
+	ls.client.log_message('velvet executable path: ${os.executable()}', .info)
+	ls.client.log_message('velvet build with V ${@VHASH}', .info)
+	ls.client.log_message('velvet build at ${metadata.build_datetime}', .info)
 	ls.client.log_message('Client / Editor: ${client_name} (PID: ${process_id})', .info)
 
 	loglib.with_fields({
@@ -526,5 +526,5 @@ fn (mut ls LanguageServer) print_info(process_id int, client_info lsp.ClientInfo
 		'build_with':   @VHASH
 		'build_at':     metadata.build_datetime
 		'build_commit': metadata.build_commit
-	}).info('v-analyzer started')
+	}).info('velvet started')
 }
