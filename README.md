@@ -16,7 +16,9 @@
 - [Editor Support](#editor-support)
   - [Zed](#zed)
   - [Neovim](#neovim)
+    - [Code Lens in Neovim](#code-lens-in-neovim)
   - [CLion](#clion)
+    - [Code Lens in CLion](#code-lens-in-clion)
 - [Troubleshooting](#troubleshooting)
   - [Default keymaps produce nothing (grt, grr, grn, gO)](#default-keymaps-produce-nothing-grt-grr-grn-go)
 - [Relationship to Upstream](#relationship-to-upstream)
@@ -354,6 +356,57 @@ cmd = { vim.fn.expand('$USERPROFILE/.config/velvet/bin/velvet.exe'), '--stdio' }
 
 Verify the server attached with `:checkhealth lsp` or `:LspInfo` — you should see `velvet` listed as attached to the current buffer. Once attached, all default Neovim LSP keymaps work without any additional configuration.
 
+#### Code Lens in Neovim
+
+velvet emits four types of Code Lens:
+
+| Lens | Appears on | What it does |
+|------|-----------|-------------|
+| `▶ Run workspace` | `fn main()` | Runs the project root with `v run` |
+| `single file` | `fn main()` | Runs only the current file with `v run` |
+| `▶ Run test` / `all file tests` | `test_*` functions | Runs a single test or the entire test file |
+| `N implementations` | `interface` declarations | Jumps to all structs that implement the interface |
+| `implement N interfaces` | `struct` declarations | Jumps to all interfaces the struct satisfies |
+
+Code Lens display requires the `vim.lsp.codelens` API, which is available in Neovim 0.9+. Add this to your `init.lua` to enable it:
+
+```lua
+-- Refresh and display code lenses when a V file is attached or saved.
+vim.api.nvim_create_autocmd({ 'LspAttach', 'BufWritePost' }, {
+  pattern = { '*.v', '*.vsh', '*.vv' },
+  callback = function()
+    vim.lsp.codelens.refresh()
+  end,
+})
+```
+
+To trigger a lens manually: place your cursor on the lens line and run `:lua vim.lsp.codelens.run()`.
+
+The run lenses (`▶ Run workspace`, `single file`, `▶ Run test`) fire the custom commands `velvet.runWorkspace`, `velvet.runFile`, and `velvet.runTests`. Neovim does not handle these automatically — you need to register handlers for them. Add the following to your `init.lua`:
+
+```lua
+vim.lsp.commands['velvet.runWorkspace'] = function(cmd)
+  local dir = vim.fn.fnamemodify(cmd.arguments[1], ':h')
+  vim.cmd('split | terminal v run ' .. dir)
+end
+
+vim.lsp.commands['velvet.runFile'] = function(cmd)
+  vim.cmd('split | terminal v run ' .. cmd.arguments[1])
+end
+
+vim.lsp.commands['velvet.runTests'] = function(cmd)
+  local path = cmd.arguments[1]
+  local name = cmd.arguments[2]
+  if name then
+    vim.cmd('split | terminal v test -run ' .. name .. ' ' .. path)
+  else
+    vim.cmd('split | terminal v test ' .. path)
+  end
+end
+```
+
+The `velvet.showReferences` command (used by the implementations and interfaces lenses) is handled natively by Neovim's LSP client — no extra configuration is needed for those lenses.
+
 Any editor that supports the Language Server Protocol can use velvet by pointing its LSP client at the binary.
 
 ### CLion
@@ -400,6 +453,35 @@ No `--stdio` flag is needed in the command. velvet defaults to stdio transport i
 4. Repeat for the `vsh` and `vv` extensions if needed.
 5. Click **OK**.
 
+#### Code Lens in CLion
+
+CLion renders Code Lens annotations via the LSP4IJ plugin (required for built-in LSP support — see setup above). velvet emits four types of Code Lens:
+
+| Lens | Appears on | What it does |
+|------|-----------|-------------|
+| `▶ Run workspace` | `fn main()` | Runs the project root with `v run` |
+| `single file` | `fn main()` | Runs only the current file with `v run` |
+| `▶ Run test` / `all file tests` | `test_*` functions | Runs a single test or the entire test file |
+| `N implementations` | `interface` declarations | Jumps to all structs that implement the interface |
+| `implement N interfaces` | `struct` declarations | Jumps to all interfaces the struct satisfies |
+
+The implementations and interfaces lenses (`velvet.showReferences`) work out of the box — clicking them opens a references panel. The run lenses fire custom commands (`velvet.runWorkspace`, `velvet.runFile`, `velvet.runTests`) that must be mapped to CLion run configurations to do anything.
+
+To wire the run lenses to CLion's terminal:
+
+1. Open **Settings** → **Tools** → **LSP4IJ** → **Language Servers** → select **velvet** → **Configuration**.
+2. Under **Client-side commands**, add a command mapping for each of the three run commands:
+
+   | Command ID | Action |
+   |---|---|
+   | `velvet.runWorkspace` | Run `v run $FOLDER_PATH` in the terminal |
+   | `velvet.runFile` | Run `v run $FILE_PATH` in the terminal |
+   | `velvet.runTests` | Run `v test $FILE_PATH` in the terminal |
+
+3. Click **OK**.
+
+> **Note:** The exact UI for client-side command mappings depends on the LSP4IJ version. If the option is not available in your version, the run lenses will still appear in the gutter but clicking them will be a no-op. The implementations and interfaces lenses are unaffected and always work.
+
 #### Verifying the connection
 
 Open a V project in CLion and open any `.v` file. Check the status bar at the bottom of the editor window — an LSP indicator should appear. You can also open the **Event Log** (**View** → **Tool Windows** → **Event Log**) and look for a message confirming the language server started.
@@ -410,6 +492,7 @@ Test that features are working:
 - **Completion** — type inside a function body and trigger completion with **Ctrl+Space**; velvet's suggestions should appear.
 - **Go to Definition** — place the cursor on a symbol and press **Ctrl+B** (or **Ctrl+Click**); CLion should navigate to the declaration.
 - **Diagnostics** — introduce a type error; a red underline and error tooltip should appear after a short delay.
+- **Code Lens** — hover over `fn main()` or an `interface` declaration; lens annotations should appear above the line.
 
 ---
 
