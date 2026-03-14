@@ -198,6 +198,34 @@ v run build.vsh release
 # copy the new binary to PATH as above
 ```
 
+To check whether you are on the latest release without rebuilding:
+
+```sh
+velvet check-updates
+```
+
+When up to date:
+
+```txt
+[INFO] Checking for velvet updates...
+[INFO] Local version: 0.1.0
+[INFO] Latest release: 0.1.0
+[SUCCESS] velvet is up to date (0.1.0)
+```
+
+When behind:
+
+```txt
+[INFO] Checking for velvet updates...
+[INFO] Local version: 0.0.6
+[INFO] Latest release: 0.1.0
+[UPDATE] velvet 0.1.0 is available (you have 0.0.6)
+
+To update, run:
+  cd velvet && git pull && v run build.vsh release
+  then copy bin/velvet to your PATH
+```
+
 ---
 
 ## Configuration
