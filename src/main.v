@@ -119,7 +119,7 @@ fn main() {
 
 	cmd.add_command(cli.Command{
 		name:        'check-updates'
-		description: 'Checks for velvet updates.'
+		description: 'Checks for velvet updates and prints the latest release version.'
 		execute:     check_updates_cmd
 		posix_mode:  true
 		version:     metadata.full_version
