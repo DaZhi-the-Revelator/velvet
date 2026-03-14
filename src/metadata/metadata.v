@@ -6,8 +6,8 @@ import v.embed_file
 
 pub const manifest = vmod.decode(@VMOD_FILE) or { panic(err) }
 pub const build_datetime = $env('BUILD_DATETIME')
-pub const build_commit = $env('BUILD_COMMIT')
-pub const full_version = manifest.version + '.' + build_commit
+pub const build_commit = if $env('BUILD_COMMIT') != '' { $env('BUILD_COMMIT') } else { 'dev-build' }
+pub const full_version = manifest.version + '+' + build_commit
 
 struct EmbedFS {
 pub mut:

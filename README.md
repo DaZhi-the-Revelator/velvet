@@ -104,13 +104,13 @@ enum Permission {
 
 ## Features
 
-All features from the upstream v-analyzer are preserved. The full capability set is:
+The full capability set is:
 
 - **Code completion / IntelliSense** — 19 context-aware providers covering struct fields, methods, module members, keywords, attributes, compile-time constants, import paths, and more
 - **Go-to-definition, type definition, implementation** — navigate to any symbol's declaration, the type of a variable, or all concrete implementations of an interface
 - **Find all references** — PSI-based cross-file search; not text search, uses the program structure index
-- **Symbol rename** — safe rename across all occurrences in the workspace, using the live parse tree for the open file to guarantee correct positions
-- **Hover documentation** — rich markdown for every symbol kind: functions, methods, structs (with full field listing), enums (with computed values), type aliases, constants, variables, parameters, enum fields, import paths, generic parameters
+- **Symbol rename** — safe cross-file rename across all occurrences in the workspace; uses the live parse tree for the open file and batch-parses all other affected files to guarantee correct positions everywhere
+- **Hover documentation** — rich markdown for every symbol kind: functions, methods, structs (with full field listing grouped by access modifier), interfaces (with full body — methods, fields, and embedded types), enums (with computed values), type aliases, constants, variables, parameters, enum fields, import paths, generic parameters; attributes such as `[deprecated]`, `[heap]`, and `[flag]` are shown above the declaration
 - **Inlay hints** — type hints after `:=`, parameter name hints at call sites, range operator hints, implicit `err →` hints in `or {}` blocks, enum field value hints, constant type hints
 - **Semantic syntax highlighting** — two-pass system (resolve-based for accurate colouring on smaller files, syntax-based fast pass for large files); distinguishes user-defined vs built-in functions, read vs write variable access
 - **Formatting** — via `v fmt`; always idiomatic, handles generics, attributes, and C interop
@@ -121,6 +121,7 @@ All features from the upstream v-analyzer are preserved. The full capability set
 - **Workspace symbols** — global search backed by the persistent stub index; fast, not a live file scan
 - **Document highlights** — read vs write access highlighted differently; updates on cursor move
 - **Code actions** — Make Mutable, Make Public, Add `[heap]`, Add `[flag]`, Import Module, Remove Unused Import
+- **Code Lens** — inline annotations above `fn main()`, test functions, interface declarations, and struct declarations; shows run controls and implementation counts (see Editor Support for per-editor setup)
 - **Diagnostics** — real V compiler errors, warnings, and notices; unused symbols tagged with `DiagnosticTag.unnecessary`, deprecated symbols with `DiagnosticTag.deprecated`
 
 ---
@@ -209,7 +210,7 @@ velvet is configured via a global or per-project TOML file.
 ~/.config/velvet/config.toml
 ```
 
-**Per-project config** — create a `.v-analyzer/config.toml` file at your project root (velvet looks for this path automatically). Key settings:
+**Per-project config** — create a `.velvet/config.toml` file at your project root (velvet looks for this path automatically). Key settings:
 
 ```toml
 # Path to your V installation (set this if velvet can't find V automatically)
@@ -219,6 +220,9 @@ custom_vroot = "/path/to/v"
 custom_cache_dir = ".velvet/cache"
 
 # Semantic tokens mode: "full", "syntax", or "none"
+# "full"   — accurate resolve-based highlighting (default for files < 1000 lines)
+# "syntax" — faster syntax-only pass, always used for large files
+# "none"   — disable semantic tokens entirely
 enable_semantic_tokens = "full"
 
 [inlay_hints]
@@ -238,6 +242,8 @@ enable_super_interfaces_lens = true
 enable_run_tests_lens = true
 
 ```
+
+> **Editor override:** All of the above settings can also be supplied at runtime via the LSP `initializationOptions` field — no config file required. Editors like Zed send these automatically from `settings.json`. Values from `initializationOptions` take precedence over the TOML file.
 
 ---
 

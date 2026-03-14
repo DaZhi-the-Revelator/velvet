@@ -65,9 +65,9 @@ pub fn (mut ls LanguageServer) initialize(params lsp.InitializeParams, mut wr Re
 				trigger_characters:   ['(', ',']
 				retrigger_characters: [',', ' ']
 			}
-			// code_lens_provider intentionally omitted — lens commands
-			// (velvet.showReferences, runWorkspace, etc.) are not
-			// implemented by any supported editor extension.
+			code_lens_provider:           lsp.CodeLensOptions{
+				resolve_provider: false
+			}
 			inlay_hint_provider:          lsp.InlayHintOptions{}
 			semantic_tokens_provider:     lsp.SemanticTokensOptions{
 				legend: lsp.SemanticTokensLegend{
@@ -248,12 +248,26 @@ fn (mut ls LanguageServer) setup() {
 	ls.setup_vpaths()
 }
 
-// apply_initialization_options applies inlay hint settings (and future settings)
-// sent by the client as a JSON object in the LSP initializationOptions field.
-// This overrides any values loaded from the TOML config file, allowing editors
-// like Zed to control hints without requiring users to edit config files on disk.
+// apply_initialization_options applies settings sent by the client as a JSON
+// object in the LSP initializationOptions field. This overrides any values
+// loaded from the TOML config file, allowing editors like Zed to control
+// features without requiring users to edit config files on disk.
 fn (mut ls LanguageServer) apply_initialization_options(options lsp.LSPAny) {
 	if options is map[string]lsp.LSPAny {
+		// enable_semantic_tokens
+		if sem_any := options['enable_semantic_tokens'] {
+			if sem_any is string {
+				ls.cfg.enable_semantic_tokens = match sem_any {
+					'full'   { config.SemanticTokensMode.full }
+					'syntax' { config.SemanticTokensMode.syntax }
+					'none'   { config.SemanticTokensMode.none_ }
+					else     { ls.cfg.enable_semantic_tokens }
+				}
+				ls.client.log_message('Applied enable_semantic_tokens from initializationOptions', .info)
+				loglib.info('Applied enable_semantic_tokens from initializationOptions')
+			}
+		}
+
 		inlay_hints_any := options['inlay_hints'] or { return }
 		if inlay_hints_any is map[string]lsp.LSPAny {
 			ih := (inlay_hints_any as map[string]lsp.LSPAny).clone()
@@ -297,6 +311,40 @@ fn (mut ls LanguageServer) apply_initialization_options(options lsp.LSPAny) {
 			ls.client.log_message('Applied inlay hint settings from initializationOptions', .info)
 			loglib.info('Applied inlay hint settings from initializationOptions')
 		}
+
+		code_lens_any := options['code_lens'] or { return }
+		if code_lens_any is map[string]lsp.LSPAny {
+			cl := (code_lens_any as map[string]lsp.LSPAny).clone()
+
+			if v := cl['enable'] {
+				if v is bool {
+					ls.cfg.code_lens.enable = v
+				}
+			}
+			if v := cl['enable_run_lens'] {
+				if v is bool {
+					ls.cfg.code_lens.enable_run_lens = v
+				}
+			}
+			if v := cl['enable_inheritors_lens'] {
+				if v is bool {
+					ls.cfg.code_lens.enable_inheritors_lens = v
+				}
+			}
+			if v := cl['enable_super_interfaces_lens'] {
+				if v is bool {
+					ls.cfg.code_lens.enable_super_interfaces_lens = v
+				}
+			}
+			if v := cl['enable_run_tests_lens'] {
+				if v is bool {
+					ls.cfg.code_lens.enable_run_tests_lens = v
+				}
+			}
+
+			ls.client.log_message('Applied code lens settings from initializationOptions', .info)
+			loglib.info('Applied code lens settings from initializationOptions')
+		}
 	}
 }
 
@@ -322,7 +370,7 @@ fn (mut ls LanguageServer) setup_cache_dir() {
 
 fn (mut ls LanguageServer) find_config() string {
 	root := ls.root_uri.path()
-	local_config_path := os.join_path(root, '.v-analyzer', 'config.toml')
+	local_config_path := os.join_path(root, config.analyzer_local_configs_folder_name, config.analyzer_config_name)
 	if os.exists(local_config_path) {
 		return local_config_path
 	}

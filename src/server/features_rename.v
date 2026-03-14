@@ -2,6 +2,7 @@ module server
 
 import lsp
 import loglib
+import analyzer.psi
 import server.tform
 import analyzer.psi.search
 
@@ -30,11 +31,26 @@ pub fn (mut ls LanguageServer) rename(params lsp.RenameParams) !lsp.WorkspaceEdi
 	}
 
 	references := search.references(element, include_declaration: true)
-	edits := tform.elements_to_text_edits(references, params.new_name)
+
+	// Group edits by source file URI so that renames touching multiple files
+	// are applied correctly. Bundling all edits under the requesting file's URI
+	// would silently skip any reference in a different file.
+	mut changes := map[string][]lsp.TextEdit{}
+	for ref in references {
+		ref_file := ref.containing_file() or { continue }
+		ref_uri := ref_file.uri().str()
+		range := if ref is psi.PsiNamedElement {
+			tform.text_range_to_lsp_range(ref.identifier_text_range())
+		} else {
+			tform.text_range_to_lsp_range(ref.text_range())
+		}
+		changes[ref_uri] << lsp.TextEdit{
+			range:    range
+			new_text: params.new_name
+		}
+	}
 
 	return lsp.WorkspaceEdit{
-		changes: {
-			uri: edits
-		}
+		changes: changes
 	}
 }

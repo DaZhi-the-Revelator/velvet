@@ -5,7 +5,7 @@ import os
 import server.tform
 import loglib
 
-const temp_formatting_file_path = os.join_path(os.temp_dir(), 'v-analyzer-formatting-temp.v')
+const temp_formatting_file_path = os.join_path(os.temp_dir(), 'velvet-formatting-temp.v')
 
 pub fn (mut ls LanguageServer) formatting(params lsp.DocumentFormattingParams) ![]lsp.TextEdit {
 	uri := params.text_document.uri.normalize()

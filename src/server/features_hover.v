@@ -1,6 +1,7 @@
 module server
 
 import lsp
+import analyzer.psi
 import server.documentation
 import loglib
 import server.tform
@@ -35,9 +36,16 @@ pub fn (mut ls LanguageServer) hover(params lsp.HoverParams) ?lsp.Hover {
 	mut provider := documentation.Provider{}
 	doc_element := provider.find_documentation_element(element)?
 	if content := provider.documentation(doc_element) {
+		// Narrow the hover range to the identifier when possible so editors
+		// only highlight the symbol name rather than the entire declaration.
+		hover_range := if doc_element is psi.PsiNamedElement {
+			tform.text_range_to_lsp_range(doc_element.identifier_text_range())
+		} else {
+			tform.text_range_to_lsp_range(element.text_range())
+		}
 		return lsp.Hover{
 			contents: lsp.hover_markdown_string(content)
-			range:    tform.text_range_to_lsp_range(element.text_range())
+			range:    hover_range
 		}
 	}
 

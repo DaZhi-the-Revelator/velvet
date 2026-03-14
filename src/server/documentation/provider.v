@@ -145,6 +145,7 @@ fn (mut p Provider) module_documentation(element psi.ModuleClause) ? {
 
 fn (mut p Provider) function_documentation(element psi.FunctionOrMethodDeclaration) ? {
 	p.write_module_name(element.containing_file)
+	p.write_attributes(element)
 	signature := element.signature()?
 	p.sb.write_string('```v\n')
 	if modifiers := element.visibility_modifiers() {
@@ -167,6 +168,7 @@ fn (mut p Provider) function_documentation(element psi.FunctionOrMethodDeclarati
 
 fn (mut p Provider) static_method_documentation(element psi.StaticMethodDeclaration) ? {
 	p.write_module_name(element.containing_file)
+	p.write_attributes(element)
 	signature := element.signature()?
 	p.sb.write_string('```v\n')
 	if modifiers := element.visibility_modifiers() {
@@ -189,6 +191,7 @@ fn (mut p Provider) static_method_documentation(element psi.StaticMethodDeclarat
 
 fn (mut p Provider) struct_documentation(element psi.StructDeclaration) ? {
 	p.write_module_name(element.containing_file)
+	p.write_attributes(element)
 	p.sb.write_string('```v\n')
 	if modifiers := element.visibility_modifiers() {
 		p.write_visibility_modifiers(modifiers)
@@ -297,6 +300,7 @@ fn (mut p Provider) interface_method_declaration_documentation(element psi.Inter
 
 fn (mut p Provider) enum_documentation(element psi.EnumDeclaration) ? {
 	p.write_module_name(element.containing_file)
+	p.write_attributes(element)
 	p.sb.write_string('```v\n')
 	if modifiers := element.visibility_modifiers() {
 		p.write_visibility_modifiers(modifiers)
