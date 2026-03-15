@@ -59,6 +59,41 @@ pub fn (f &FieldDeclaration) get_type() types.Type {
 	return infer_type(f)
 }
 
+// default_value returns the literal text of the declared default value for this
+// field, if one is present in the source (e.g. `width f64 = 1.5` → `1.5`).
+// Returns `none` for stub-based elements or when no default is declared.
+pub fn (f &FieldDeclaration) default_value() ?string {
+	// Stubs do not carry the initialiser expression.
+	if f.stub_based() {
+		return none
+	}
+	// The grammar for struct_field_declaration is:
+	//   <identifier> <plain_type> [ '=' <expression> ]
+	// Walk children looking for '=' then grab the next named sibling.
+	mut found_eq := false
+	mut child := f.node.first_child() or { return none }
+	for {
+		if !found_eq {
+			if child.type_name == .unknown && f.get_text_of_node(child) == '=' {
+				found_eq = true
+			}
+		} else {
+			if child.type_name != .unknown {
+				// This is the default-value expression node.
+				file := f.containing_file() or { return none }
+				return child.text(file.source_text)
+			}
+		}
+		child = child.next_sibling() or { break }
+	}
+	return none
+}
+
+fn (f &FieldDeclaration) get_text_of_node(node AstNode) string {
+	file := f.containing_file() or { return '' }
+	return node.text(file.source_text)
+}
+
 pub fn (f &FieldDeclaration) owner() ?PsiElement {
 	if struct_ := f.parent_of_type(.struct_declaration) {
 		return struct_

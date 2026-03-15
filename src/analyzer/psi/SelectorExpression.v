@@ -10,7 +10,7 @@ fn (n &SelectorExpression) name() string {
 	return ''
 }
 
-fn (n &SelectorExpression) qualifier() ?PsiElement {
+pub fn (n &SelectorExpression) qualifier() ?PsiElement {
 	return n.first_child()
 }
 

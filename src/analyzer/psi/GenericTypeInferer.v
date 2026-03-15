@@ -3,7 +3,7 @@ module psi
 import analyzer.psi.types
 import math
 
-struct GenericTypeInferer {}
+pub struct GenericTypeInferer {}
 
 fn (g &GenericTypeInferer) infer_generic_call(arg_owner GenericArgumentsOwner, params_owner GenericParametersOwner,
 	result_type types.Type) types.Type {

@@ -131,6 +131,10 @@ pub fn (mut v InlayHintsVisitor) process_node(node psi.AstNode, containing_file 
 		v.handle_call_expression(node, containing_file)
 	}
 
+	if node.type_name == .function_literal && v.cfg.enable_anon_fn_return_type_hints {
+		v.handle_function_literal(node, containing_file)
+	}
+
 	if node.type_name == .enum_field_definition && v.cfg.enable_enum_field_value_hints {
 		v.handle_enum_field(node, containing_file)
 	}
@@ -240,6 +244,51 @@ pub fn (mut v InlayHintsVisitor) handle_if_unwrapping(node psi.AstNode, containi
 
 	block := node.child_by_field_name('block') or { return }
 	v.handle_implicit_error_variable(block)
+}
+
+// handle_function_literal adds an inlay hint showing the inferred return type
+// of an anonymous function on its closing brace, but only when no explicit
+// return type is written in the signature.
+//
+// Example:  `fn(x int) { return x * 2 }`  →  `}  → int`
+pub fn (mut v InlayHintsVisitor) handle_function_literal(fn_node psi.AstNode, containing_file &psi.PsiFile) {
+	element := psi.create_element(fn_node, containing_file)
+	if element is psi.FunctionLiteral {
+		sig := element.signature() or { return }
+
+		// Skip if an explicit return type is already written in the signature.
+		if _ := sig.result() {
+			return
+		}
+
+		// Infer the return type from the function body.
+		fn_type := psi.infer_type(element)
+		if fn_type is types.FunctionType {
+			ret_type := fn_type.result
+
+			// Nothing useful to show for void / unknown return types.
+			if ret_type is types.UnknownType {
+				return
+			}
+			readable := ret_type.readable_name()
+			if readable == '' || readable == 'void' {
+				return
+			}
+
+			// Place the hint just after the closing `}` of the function body.
+			block_node := fn_node.last_child() or { return }
+			end_pt := block_node.end_point()
+
+			v.result << lsp.InlayHint{
+				position: lsp.Position{
+					line:      int(end_pt.row)
+					character: int(end_pt.column)
+				}
+				label:    ' → ${readable}'
+				kind:     .type_
+			}
+		}
+	}
 }
 
 pub fn (mut v InlayHintsVisitor) handle_implicit_error_variable(block psi.AstNode) {

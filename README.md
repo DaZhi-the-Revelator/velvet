@@ -6,8 +6,6 @@
 
 ## Table of Contents
 
-- [What's Different from Upstream](#whats-different-from-upstream)
-  - [Richer Hover Documentation](#richer-hover-documentation)
 - [Features](#features)
 - [Building from Source](#building-from-source)
 - [Installation](#installation)
@@ -27,35 +25,72 @@
 
 ---
 
-## What's Different from Upstream
+## Features
 
-### Feature Enhancements
+### Code Completion / IntelliSense
 
-#### Richer Hover Documentation
+19 context-aware providers covering struct fields, methods, module members, keywords, attributes, compile-time constants, import paths, and more.
 
-**Interface hover** now renders the full interface body with methods and fields:
+**Generic-aware completions** — completion after `.` on a generic instantiation resolves field and method types correctly. For example:
 
-```txt
-Module: **main**
 ```v
-interface Animal {
-	name string
-	sound() string
-	move()
+struct Container[T] {
+    value T
+}
+
+c := Container[Point]{ value: Point{} }
+c.  // 'value' now shows type Point, not T
+```
+
+This works for generic stdlib types too — `[]int`, `map[string]int`, and user-defined generics all resolve their type parameters through the instantiation.
+
+**Struct literal field completions with default values** — when completing inside a struct literal, fields with declared default values prefill the default rather than the zero value:
+
+```v
+struct Config {
+    timeout int = 5000
+    retries int = 3
+}
+
+// Typing `Config{ ` and triggering completion suggests:
+//   timeout: 5000
+//   retries: 3
+// instead of:
+//   timeout: 0
+//   retries: 0
+```
+
+### Go-to-Definition, Type Definition, Implementation
+
+Navigate to any symbol's declaration, the type of a variable, or all concrete implementations of an interface.
+
+**`$if` compile-time conditions** — pressing go-to-definition on the condition identifier inside a `$if` block navigates to the constant's definition in the stubs index:
+
+```v
+$if windows {    // go-to-def on 'windows' → jumps to its ConstantDefinition
+    ...
 }
 ```
 
-Previously, hovering an interface showed only:
+`@FILE`, `@LINE`, `@MOD`, and the other compile-time built-in identifiers are compiler intrinsics with no source location — go-to-definition returns no links rather than crashing.
 
-```txt
-Module: **main**
-```v
-interface Animal
+### Find All References
+
+PSI-based cross-file search; not text search, uses the program structure index.
+
+### Symbol Rename
+
+Safe cross-file rename across all occurrences in the workspace; uses the live parse tree for the open file and batch-parses all other affected files to guarantee correct positions everywhere.
+
+### Hover Documentation
+
+Rich markdown for every symbol kind: functions, methods, structs, interfaces, enums, type aliases, constants, variables, parameters, enum fields, import paths, and generic parameters. Attributes such as `[deprecated]`, `[heap]`, and `[flag]` are shown above the declaration.
+
+`@FILE`, `@LINE`, `@MOD`, and all other compile-time built-in identifiers show a description on hover instead of nothing.
+
+**Struct hover** renders the full struct body, not just the name. Fields are grouped by access modifier and displayed with their types:
+
 ```
-
-**Struct hover** now renders the full struct body, not just the name. Fields are grouped by access modifier and displayed with their types:
-
-```txt
 Module: **main**
 ```v
 struct Rectangle {
@@ -67,17 +102,21 @@ struct Rectangle {
 }
 ```
 
-Previously, hovering a struct showed only:
+**Interface hover** renders the full interface body with methods and fields:
 
-```txt
+```
 Module: **main**
 ```v
-struct Rectangle
+interface Animal {
+    name string
+    sound() string
+    move()
+}
 ```
 
-**Enum hover** now renders all fields with their computed numeric values. Implicit auto-increment values, explicit values, and `[flag]` bitfield binary representations are all shown:
+**Enum hover** renders all fields with their computed numeric values. Implicit auto-increment values, explicit values, and `[flag]` bitfield binary representations are all shown:
 
-```txt
+```
 Module: **main**
 ```v
 enum Direction {
@@ -90,7 +129,7 @@ enum Direction {
 
 For `[flag]` enums, each field shows its binary representation alongside its decimal value:
 
-```txt
+```
 Module: **main**
 ```v
 enum Permission {
@@ -100,29 +139,65 @@ enum Permission {
 }
 ```
 
----
+### Inlay Hints
 
-## Features
+Type hints after `:=`, parameter name hints at call sites, range operator hints, implicit `err →` hints in `or {}` blocks, enum field value hints, and constant type hints.
 
-The full capability set is:
+**Anonymous function return type hints** — anonymous functions with no explicit return type show the inferred return type as an inlay hint on the closing `}`:
 
-- **Code completion / IntelliSense** — 19 context-aware providers covering struct fields, methods, module members, keywords, attributes, compile-time constants, import paths, and more
-- **Go-to-definition, type definition, implementation** — navigate to any symbol's declaration, the type of a variable, or all concrete implementations of an interface
-- **Find all references** — PSI-based cross-file search; not text search, uses the program structure index
-- **Symbol rename** — safe cross-file rename across all occurrences in the workspace; uses the live parse tree for the open file and batch-parses all other affected files to guarantee correct positions everywhere
-- **Hover documentation** — rich markdown for every symbol kind: functions, methods, structs (with full field listing grouped by access modifier), interfaces (with full body — methods, fields, and embedded types), enums (with computed values), type aliases, constants, variables, parameters, enum fields, import paths, generic parameters; attributes such as `[deprecated]`, `[heap]`, and `[flag]` are shown above the declaration
-- **Inlay hints** — type hints after `:=`, parameter name hints at call sites, range operator hints, implicit `err →` hints in `or {}` blocks, enum field value hints, constant type hints
-- **Semantic syntax highlighting** — two-pass system (resolve-based for accurate colouring on smaller files, syntax-based fast pass for large files); distinguishes user-defined vs built-in functions, read vs write variable access
-- **Formatting** — via `v fmt`; always idiomatic, handles generics, attributes, and C interop
-- **Signature help** — active parameter highlighted as you type; retriggered on `,` and ` `
-- **Folding ranges** — function bodies, struct/interface/enum bodies, `if`/`else`, `for`, `match`, all `{}` blocks
-- **Selection range** — structural selection expansion (Alt+Shift+→ in Zed); each press expands the selection one syntactic level outward: identifier → expression → statement → block → function body → file
-- **Document symbols** — full nested outline: functions, structs with fields, interfaces with methods, enums with values, constants, type aliases
-- **Workspace symbols** — global search backed by the persistent stub index; fast, not a live file scan
-- **Document highlights** — read vs write access highlighted differently; updates on cursor move
-- **Code actions** — Make Mutable, Make Public, Add `[heap]`, Add `[flag]`, Import Module, Remove Unused Import
-- **Code Lens** — inline annotations above `fn main()`, test functions, interface declarations, and struct declarations; shows run controls and implementation counts (see Editor Support for per-editor setup)
-- **Diagnostics** — real V compiler errors, warnings, and notices; unused symbols tagged with `DiagnosticTag.unnecessary`, deprecated symbols with `DiagnosticTag.deprecated`
+```v
+f := fn(x int) { return x * 2 }  // shows: }  → int
+
+arr.map(fn(it int) {              // shows: }  → bool
+    return it > 0
+})
+```
+
+The hint is suppressed when an explicit return type is already written. Configurable via `enable_anon_fn_return_type_hints` (see [Configuration](#configuration)).
+
+### Semantic Syntax Highlighting
+
+Two-pass system: resolve-based for accurate colouring on smaller files, syntax-based fast pass for large files. Distinguishes user-defined vs built-in functions, and read vs write variable access.
+
+### Formatting
+
+Via `v fmt`; always idiomatic, handles generics, attributes, and C interop.
+
+### Signature Help
+
+Active parameter highlighted as you type; retriggered on `,` and ` `.
+
+### Folding Ranges
+
+Function bodies, struct/interface/enum bodies, `if`/`else`, `for`, `match`, all `{}` blocks.
+
+### Selection Range
+
+Structural selection expansion (Alt+Shift+→ in Zed); each press expands the selection one syntactic level outward: identifier → expression → statement → block → function body → file.
+
+### Document Symbols
+
+Full nested outline: functions, structs with fields, interfaces with methods, enums with values, constants, type aliases.
+
+### Workspace Symbols
+
+Global search backed by the persistent stub index; fast, not a live file scan.
+
+### Document Highlights
+
+Read vs write access highlighted differently; updates on cursor move.
+
+### Code Actions
+
+Make Mutable, Make Public, Add `[heap]`, Add `[flag]`, Import Module, Remove Unused Import.
+
+### Code Lens
+
+Inline annotations above `fn main()`, test functions, interface declarations, and struct declarations; shows run controls and implementation counts (see [Editor Support](#editor-support) for per-editor setup).
+
+### Diagnostics
+
+Real V compiler errors, warnings, and notices; unused symbols tagged with `DiagnosticTag.unnecessary`, deprecated symbols with `DiagnosticTag.deprecated`.
 
 ---
 
@@ -261,6 +336,7 @@ enable_range_hints = true
 enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
+enable_anon_fn_return_type_hints = true   # inferred return type on anonymous fn closing `}`
 
 [code_lens]
 enable = true
@@ -268,7 +344,6 @@ enable_run_lens = true
 enable_inheritors_lens = true
 enable_super_interfaces_lens = true
 enable_run_tests_lens = true
-
 ```
 
 > **Editor override:** All of the above settings can also be supplied at runtime via the LSP `initializationOptions` field — no config file required. Editors like Zed send these automatically from `settings.json`. Values from `initializationOptions` take precedence over the TOML file.

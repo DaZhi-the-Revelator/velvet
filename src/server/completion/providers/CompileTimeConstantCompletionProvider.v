@@ -3,7 +3,7 @@ module providers
 import server.completion
 import lsp
 
-const compile_time_constant = {
+pub const compile_time_constant = {
 	'FN':        'The name of the current function'
 	'METHOD':    'The name of the current method'
 	'MOD':       'The name of the current module'

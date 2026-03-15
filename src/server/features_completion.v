@@ -2,6 +2,7 @@ module server
 
 import lsp
 import analyzer.psi
+import analyzer.psi.types as psi_types
 import server.completion
 import server.completion.providers
 import loglib
@@ -54,11 +55,17 @@ pub fn (mut ls LanguageServer) completion(params lsp.CompletionParams) ![]lsp.Co
 
 	mut result_set := &completion.CompletionResultSet{}
 
+	// Build the generic substitution map for dot-completions on generic
+	// instantiations (e.g. `container_of_point.`). We inspect the qualifier of
+	// the selector expression that wraps the dummy identifier.
+	generic_ts_map := build_generic_ts_map(element)
+
 	mut processor := &providers.ReferenceCompletionProcessor{
-		file:       file.psi_file
-		module_fqn: file.psi_file.module_fqn()
-		root:       ls.root_uri.path()
-		ctx:        ctx
+		file:           file.psi_file
+		module_fqn:     file.psi_file.module_fqn()
+		root:           ls.root_uri.path()
+		ctx:            ctx
+		generic_ts_map: generic_ts_map
 	}
 
 	mut completion_providers := []completion.CompletionProvider{}
@@ -101,4 +108,67 @@ pub fn (mut ls LanguageServer) completion(params lsp.CompletionParams) ![]lsp.Co
 
 fn insert_to_string(str string, offset u32, insert string) string {
 	return str[..offset] + insert + str[offset..]
+}
+
+// build_generic_ts_map inspects the qualifier of the selector expression
+// containing `element` and, if the qualifier's type is a GenericInstantiationType,
+// returns a map of generic-parameter-name → concrete-type ready to be passed to
+// substitute_generics().
+fn build_generic_ts_map(element psi.PsiElement) map[string]psi_types.Type {
+	parent := element.parent() or { return map[string]psi_types.Type{} }
+
+	// The dummy identifier lands inside a SelectorExpression (after `.`).
+	// Walk up one or two levels to find it.
+	if parent is psi.SelectorExpression {
+		return extract_generic_map(parent)
+	}
+	grand := parent.parent() or { return map[string]psi_types.Type{} }
+	if grand is psi.SelectorExpression {
+		return extract_generic_map(grand)
+	}
+	return map[string]psi_types.Type{}
+}
+
+fn extract_generic_map(sel psi.SelectorExpression) map[string]psi_types.Type {
+	qualifier := sel.qualifier() or { return map[string]psi_types.Type{} }
+	qualifier_type := psi.infer_type(qualifier)
+
+	instantiation := unwrap_to_instantiation(qualifier_type) or {
+		return map[string]psi_types.Type{}
+	}
+
+	// Ask GenericTypeInferer for the ordered type-parameter names.
+	// extract_instantiation_ts takes a GenericInstantiationType by value.
+	inferer := psi.GenericTypeInferer{}
+	params := inferer.extract_instantiation_ts(instantiation)
+	if params.len == 0 {
+		return map[string]psi_types.Type{}
+	}
+
+	mut mapping := map[string]psi_types.Type{}
+	for i, param_name in params {
+		if i < instantiation.specialization.len {
+			mapping[param_name] = instantiation.specialization[i]
+		}
+	}
+	return mapping
+}
+
+fn unwrap_to_instantiation(typ psi_types.Type) ?psi_types.GenericInstantiationType {
+	if typ is psi_types.GenericInstantiationType {
+		return *typ
+	}
+	if typ is psi_types.AliasType {
+		return unwrap_to_instantiation(typ.inner)
+	}
+	if typ is psi_types.PointerType {
+		return unwrap_to_instantiation(typ.inner)
+	}
+	if typ is psi_types.OptionType {
+		return unwrap_to_instantiation(typ.inner)
+	}
+	if typ is psi_types.ResultType {
+		return unwrap_to_instantiation(typ.inner)
+	}
+	return none
 }

@@ -3,6 +3,7 @@ module providers
 import lsp
 import strings
 import analyzer.psi
+import analyzer.psi.types as psi_types
 import analyzer.lang
 import server.completion
 
@@ -12,6 +13,12 @@ pub:
 	module_fqn string
 	root       string
 	ctx        &completion.CompletionContext
+pub mut:
+	// generic_ts_map holds T→ConcreteType substitutions derived from the
+	// qualifier's GenericInstantiationType (e.g. Container[Point] → T:Point).
+	// It is populated once when the processor is created and applied to every
+	// FieldDeclaration the processor encounters.
+	generic_ts_map map[string]psi_types.Type
 mut:
 	result map[string]lsp.CompletionItem
 }
@@ -264,10 +271,24 @@ fn (mut c ReferenceCompletionProcessor) execute(element psi.PsiElement) bool {
 	}
 
 	if element is psi.FieldDeclaration {
-		zero_value := lang.get_zero_value_for(element.get_type()).replace('}', '\\}')
+		// Resolve the field type, substituting any generic parameters if the
+		// qualifying expression was a generic instantiation (e.g. Container[Point]).
+		raw_type := element.get_type()
+		display_type := if c.generic_ts_map.len > 0 {
+			raw_type.substitute_generics(c.generic_ts_map)
+		} else {
+			raw_type
+		}
+
+		// Prefer the declared default value over the zero value for the snippet.
+		default_text := if declared := element.default_value() {
+			declared.replace('}', '\\}')
+		} else {
+			lang.get_zero_value_for(display_type).replace('}', '\\}')
+		}
 
 		insert_text := if c.ctx.inside_struct_init_with_keys {
-			element.name() + ': \${1:${zero_value}}'
+			element.name() + ': \${1:${default_text}}'
 		} else {
 			element.name()
 		}
@@ -275,9 +296,9 @@ fn (mut c ReferenceCompletionProcessor) execute(element psi.PsiElement) bool {
 		c.add_item(
 			label:              element.name()
 			kind:               .field
-			detail:             element.get_type().readable_name()
+			detail:             display_type.readable_name()
 			label_details:      lsp.CompletionItemLabelDetails{
-				description: element.get_type().readable_name()
+				description: display_type.readable_name()
 			}
 			documentation:      element.doc_comment()
 			insert_text:        insert_text
