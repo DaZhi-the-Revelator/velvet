@@ -674,7 +674,7 @@ velvet diverges from [vlang/v-analyzer](https://github.com/vlang/v-analyzer) wit
 ## Authors
 
 - Maintained by [DaZhi-the-Revelator](https://github.com/DaZhi-the-Revelator)
-- Original v-analyzer by [VOSCA](https://github.com/vlang-association), based on [VLS](https://github.com/vlang/vls)
+- Original v-analyzer by [VOSCA](https://github.com/vlang/vls/tree/old_vls), based on [VLS](https://github.com/vlang/vls)
 
 ---
 

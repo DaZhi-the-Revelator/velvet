@@ -268,7 +268,7 @@ fn (mut ls LanguageServer) apply_initialization_options(options lsp.LSPAny) {
 			}
 		}
 
-		inlay_hints_any := options['inlay_hints'] or { return }
+		inlay_hints_any := options['inlay_hints'] or { lsp.LSPAny('') }
 		if inlay_hints_any is map[string]lsp.LSPAny {
 			ih := (inlay_hints_any as map[string]lsp.LSPAny).clone()
 
@@ -312,7 +312,7 @@ fn (mut ls LanguageServer) apply_initialization_options(options lsp.LSPAny) {
 			loglib.info('Applied inlay hint settings from initializationOptions')
 		}
 
-		code_lens_any := options['code_lens'] or { return }
+		code_lens_any := options['code_lens'] or { lsp.LSPAny('') }
 		if code_lens_any is map[string]lsp.LSPAny {
 			cl := (code_lens_any as map[string]lsp.LSPAny).clone()
 
