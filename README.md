@@ -90,8 +90,6 @@ Rich markdown for every symbol kind: functions, methods, structs, interfaces, en
 
 **Struct hover** renders the full struct body, not just the name. Fields are grouped by access modifier and displayed with their types:
 
-```
-Module: **main**
 ```v
 struct Rectangle {
     pub:
@@ -104,8 +102,6 @@ struct Rectangle {
 
 **Interface hover** renders the full interface body with methods and fields:
 
-```
-Module: **main**
 ```v
 interface Animal {
     name string
@@ -116,8 +112,8 @@ interface Animal {
 
 **Enum hover** renders all fields with their computed numeric values. Implicit auto-increment values, explicit values, and `[flag]` bitfield binary representations are all shown:
 
-```
 Module: **main**
+
 ```v
 enum Direction {
     north = 0
@@ -129,8 +125,6 @@ enum Direction {
 
 For `[flag]` enums, each field shows its binary representation alongside its decimal value:
 
-```
-Module: **main**
 ```v
 enum Permission {
     read    = 0b001 (1)
